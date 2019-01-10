@@ -78,7 +78,7 @@ defmodule SerrLint.ProjectLinter do
 
         Logger.debug("Diff id: #{inspect(diff_id)} head sha: #{inspect(head_sha)}")
 
-        diff_files = GitlabAPI.get_all_diff_file(state.id, mr_id, diff_id) |> Enum.slice(0..1)
+        diff_files = GitlabAPI.get_all_diff_file(state.id, mr_id, diff_id)
         Logger.debug("#{inspect(diff_files)}")
 
         Enum.each(diff_files, fn file ->
