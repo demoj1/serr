@@ -24,8 +24,8 @@ release :serr do
   set(
     applications: [
       :runtime_tools,
-      serr_logs: :permanent,
-      serr_lint: :permanent
+      :serr_logs,
+      :serr_lint
     ]
   )
 end

@@ -20,7 +20,7 @@ defmodule SerrLogs.MixProject do
   def application do
     [
       mod: {SerrLogs, []},
-      extra_applications: [:logger]
+      extra_applications: [:logger, :nostrum]
     ]
   end
 
@@ -34,7 +34,7 @@ defmodule SerrLogs.MixProject do
       {:timex, "~> 3.1"},
       {:quantum, "~> 2.3"},
       {:distillery, "~> 1.5.5"},
-      {:nostrum, git: "https://github.com/dmitrydprog/nostrum.git", tag: "0.2.4"},
+      {:nostrum, git: "https://github.com/dmitrydprog/nostrum.git", tag: "0.2.6"},
       {:dogma, "~> 0.1", only: :dev},
       {:dialyxir, "~> 1.0.0-rc.4", only: [:dev], runtime: false}
     ]
