@@ -123,7 +123,7 @@ defmodule SerrLint.ProjectLinter do
         |> Enum.at(0, [])
         |> Tuple.to_list()
         |> Enum.at(0, [])
-        |> Enum.map(&Map.take(&1, ["message", "line", "ruleId", "severity"]))
+        |> Enum.map(&Map.take(&1, ["message", "line", "ruleId", "severity", "column"]))
 
       GenServer.cast(self(), {:lint_result, mr_id, file_path, mr_id, head, base, start, lint_res})
     end)
@@ -140,7 +140,8 @@ defmodule SerrLint.ProjectLinter do
       "ruleId" => rule_id,
       "severity" => level,
       "message" => message,
-      "line" => line
+      "line" => line,
+      "column" => column
     } = msg
 
     circle =
@@ -153,7 +154,8 @@ defmodule SerrLint.ProjectLinter do
       "body" => """
       # #{circle} #{message}
       * ID правила: #{rule_id}
-      * Линия: #{line}
+      * Строка: #{line}
+      * Столбец: #{column}
       """,
       "position[base_sha]" => base_sha,
       "position[start_sha]" => start_sha,
