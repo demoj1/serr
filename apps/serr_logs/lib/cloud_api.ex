@@ -86,7 +86,8 @@ defmodule SerrLogs.CloudApi do
   @spec get_log_msg_for_time(any, String.t(), String.t(), list(integer)) :: any
   def get_log_msg_for_time(
         last_query_time \\ Timex.shift(Timex.now(), minutes: -15),
-        service \\ "mercury",
+        service \\ nil,
+        methods \\ nil,
         prefix \\ "pre-test",
         levels \\ [1, 3, 4]
       ) do
@@ -99,6 +100,63 @@ defmodule SerrLogs.CloudApi do
 
     to_date = Timex.format!(to_date, "%Y-%m-%d %H:%M:%S.%f%:z", :strftime)
     from_date = Timex.format!(from_date, "%Y-%m-%d %H:%M:%S.%f%:z", :strftime)
+
+    filter =
+      case {service, methods} do
+        {service, nil} when not is_nil(service) ->
+          %{
+            _type: "record",
+            d: [
+              to_date,
+              from_date,
+              service || "",
+              levels,
+              5000,
+              true
+            ],
+            s: [
+              %{n: "ВремяДо", t: "Строка"},
+              %{n: "ВремяОт", t: "Строка"},
+              %{n: "Группа", t: "Строка"},
+              %{
+                n: "Тип",
+                t: %{n: "Массив", t: "Число целое"}
+              },
+              %{n: "ЧислоЗаписей", t: "Число целое"},
+              %{n: "ResolveIP", t: "Логическое"}
+            ]
+          }
+
+        {nil, method} when not is_nil(method) ->
+          %{
+            _type: "record",
+            d: [
+              to_date,
+              from_date,
+              Enum.join(methods, ", "),
+              levels,
+              5000,
+              true
+            ],
+            s: [
+              %{n: "ВремяДо", t: "Строка"},
+              %{n: "ВремяОт", t: "Строка"},
+              %{n: "Метод", t: "Строка"},
+              %{
+                n: "Тип",
+                t: %{n: "Массив", t: "Число целое"}
+              },
+              %{n: "ЧислоЗаписей", t: "Число целое"},
+              %{n: "ResolveIP", t: "Логическое"}
+            ]
+          }
+
+        {nil, nil} ->
+          nil
+
+        _ ->
+          Logger.warn("Unexpected filter arguments")
+      end
 
     body = %{
       id: "1",
@@ -116,34 +174,13 @@ defmodule SerrLogs.CloudApi do
           ]
         },
         Сортировка: nil,
-        Фильтр: %{
-          _type: "record",
-          d: [
-            to_date,
-            from_date,
-            service,
-            levels,
-            5000,
-            true
-          ],
-          s: [
-            %{n: "ВремяДо", t: "Строка"},
-            %{n: "ВремяОт", t: "Строка"},
-            %{n: "Группа", t: "Строка"},
-            %{
-              n: "Тип",
-              t: %{n: "Массив", t: "Число целое"}
-            },
-            %{n: "ЧислоЗаписей", t: "Число целое"},
-            %{n: "ResolveIP", t: "Логическое"}
-          ]
-        }
+        Фильтр: filter
       },
       protocol: "5"
     }
 
-    {:ok, response} =
-      HTTPoison.post(
+    response =
+      HTTPoison.post!(
         jar,
         url,
         Poison.encode!(body),

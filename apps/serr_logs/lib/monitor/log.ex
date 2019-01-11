@@ -72,6 +72,7 @@ defmodule SerrLogs.Monitor.LogDomain do
   @moduledoc false
 
   require Logger
+  require SerrLogs
   alias Nostrum.Struct.Embed, as: Embed
   alias Nostrum.Struct.Embed.Field, as: Field
   use ExActor.GenServer
@@ -120,10 +121,17 @@ defmodule SerrLogs.Monitor.LogDomain do
   end
 
   @spec pool_data(map) :: any
-  def pool_data(%{domain: domain, level: level, service: service, last_time: last_time}) do
+  def pool_data(%{
+        domain: domain,
+        level: level,
+        service: service,
+        methods: methods,
+        last_time: last_time
+      }) do
     SerrLogs.CloudApi.get_log_msg_for_time(
       last_time,
       service,
+      methods,
       domain,
       level
     )
@@ -137,7 +145,7 @@ defmodule SerrLogs.Monitor.LogDomain do
         service: service,
         error_type: error_type
       }) do
-    error_msg = error_msg |> String.reverse() |> String.slice(0..2000) |> String.reverse()
+    error_msg = error_msg |> String.reverse() |> String.slice(0..1900) |> String.reverse()
     date = Timex.parse!(time, "{ISO:Extended}")
 
     case GenServer.call(:SpamFilter, {:spam_filter, "#{discord_channel}#{error_msg}"}) do
@@ -177,7 +185,7 @@ defmodule SerrLogs.Monitor.LogDomain do
 
   @spec initial_schedule(String.t(), pos_integer) :: atom
   def initial_schedule(domain, pooling_minutes) do
-    res = SerrLogs.Scheduler.delete_job(String.to_atom("Beat_domain_#{domain}"))
+    SerrLogs.Scheduler.delete_job(String.to_atom("Beat_domain_#{domain}"))
 
     SerrLogs.Scheduler.new_job()
     |> Quantum.Job.set_name(String.to_atom("Beat_domain_#{domain}"))
@@ -188,5 +196,10 @@ defmodule SerrLogs.Monitor.LogDomain do
     |> SerrLogs.Scheduler.add_job()
 
     String.to_atom("Beat_domain_#{domain}")
+  end
+
+  def handle_info(_, state) do
+    SerrLogs.trace_start()
+    {:noreply, state}
   end
 end
