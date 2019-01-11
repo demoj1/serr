@@ -8,7 +8,7 @@ config :logger, :console,
   handle_sasl_reports: true,
   level: :debug,
   format: "$time [$level] $metadata\n└── $message\n\n",
-  metadata: [:module]
+  metadata: [:module, :function, :file, :line]
 
 config :serr_logs, SerrLogs.Scheduler,
   global: true,

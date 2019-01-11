@@ -2,7 +2,6 @@ defmodule SerrLogs.Doctor do
   require Logger
 
   def check_health() do
-    Logger.debug("Start checking health")
     domains = Application.get_env(:serr_logs, :observers)
 
     for {k, v} <- domains do
@@ -13,11 +12,9 @@ defmodule SerrLogs.Doctor do
 
   @spec check_health({String.t(), String.t(), String.t()}) :: any
   def check_health({domain, user, password}) do
-    Logger.debug("Check #{domain} with user #{user} and password #{password}")
-
     case SerrLogs.CloudApi.ping(domain) do
       :ok ->
-        Logger.debug("Domain #{domain} its ok!")
+        :ok
 
       :error ->
         Logger.warn("Domain #{domain} error!")

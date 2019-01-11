@@ -2,11 +2,13 @@ defmodule SerrLogs.CloudApi do
   @moduledoc false
 
   require Logger
+  require SerrLogs
   alias CookieJar.HTTPoison, as: HTTPoison
   alias Timex
 
   @spec ping(String.t()) :: :error | :ok
   def ping(prefix \\ "pre-test") do
+    SerrLogs.trace_start()
     {:ok, jar} = SerrLogs.CookieStore.get(prefix)
 
     url =
@@ -37,6 +39,7 @@ defmodule SerrLogs.CloudApi do
 
   @spec auth(String.t(), String.t(), String.t()) :: String.t()
   def auth(prefix \\ "pre-test", user \\ "Viewer", password \\ "Viewer1234") do
+    SerrLogs.trace_start()
     {:ok, jar} = SerrLogs.CookieStore.get(prefix)
 
     auth_url = "https://#{prefix}-cloud.sbis.ru/auth/service/sbis-rpc-service300.dll"
@@ -77,8 +80,6 @@ defmodule SerrLogs.CloudApi do
 
     %{"result" => %{"d" => [[_ | [id]] | _]}} = Poison.decode!(response.body)
 
-    Logger.debug("Auth on domain #{prefix} with sid: #{id}")
-
     id
   end
 
@@ -89,6 +90,7 @@ defmodule SerrLogs.CloudApi do
         prefix \\ "pre-test",
         levels \\ [1, 3, 4]
       ) do
+    SerrLogs.trace_start()
     {:ok, jar} = SerrLogs.CookieStore.get(prefix)
     url = "https://#{prefix}-cloud.sbis.ru/view_log/service/sbis-rpc-service300.dl"
 
@@ -97,10 +99,6 @@ defmodule SerrLogs.CloudApi do
 
     to_date = Timex.format!(to_date, "%Y-%m-%d %H:%M:%S.%f%:z", :strftime)
     from_date = Timex.format!(from_date, "%Y-%m-%d %H:%M:%S.%f%:z", :strftime)
-
-    Logger.debug(
-      "Get #{prefix} logs for time [#{from_date}; #{to_date}] last query time: #{last_query_time}"
-    )
 
     body = %{
       id: "1",
@@ -158,14 +156,13 @@ defmodule SerrLogs.CloudApi do
 
     %{"result" => %{"d" => result}} = Poison.decode!(response.body)
 
-    Logger.debug("result: #{inspect(result)}")
-
     result
     |> Enum.map(&parse_log_msg!(&1))
   end
 
   @spec get_stats_last_10_min(String.t(), String.t()) :: any
   def get_stats_last_10_min(service \\ "gis diagnostic ps", prefix \\ "pre-test") do
+    SerrLogs.trace_start()
     {:ok, jar} = SerrLogs.CookieStore.get(prefix)
     url = "https://#{prefix}-cloud.sbis.ru/stats-cloud-interface/service/"
 
@@ -317,6 +314,7 @@ defmodule SerrLogs.CloudApi do
 
   @spec get_build_status(String.t()) :: :empty | [map]
   def get_build_status(prefix \\ "pre-test") do
+    SerrLogs.trace_start()
     {:ok, jar} = SerrLogs.CookieStore.get(prefix)
     url = "https://#{prefix}-cloud.sbis.ru/update/service/"
 
@@ -341,12 +339,10 @@ defmodule SerrLogs.CloudApi do
         "Сортировка" => nil,
         "Фильтр" => %{
           "_type" => "record",
-          "d" => ["С узлами и листьями", "С разворотом", nil, 1, false],
+          "d" => ["С узлами и листьями", "С разворотом", 1, false],
           "s" => [
             %{"n" => "ВидДерева", "t" => "Строка"},
             %{"n" => "Разворот", "t" => "Строка"},
-            %{"n" => "Название", "t" => "Строка"},
-            %{"n" => "Раздел", "t" => "Строка"},
             %{"n" => "Режим", "t" => "Число целое"},
             %{"n" => "ТолькоОшибки", "t" => "Логическое"}
           ]

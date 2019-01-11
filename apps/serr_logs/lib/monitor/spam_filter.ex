@@ -15,11 +15,8 @@ defmodule SerrLogs.Monitor.SpamFilter do
 
     filter_msg =
       Enum.find(state, nil, fn {str, _} ->
-        Logger.debug("Jaro distance #{str} with #{msg} = #{String.jaro_distance(msg, str)}")
         String.jaro_distance(msg, str) >= 0.9
       end)
-
-    Logger.debug("Filterd spam msg: #{inspect(filter_msg)}")
 
     case filter_msg do
       nil ->
@@ -27,8 +24,6 @@ defmodule SerrLogs.Monitor.SpamFilter do
 
       {tmp, time} ->
         diff_sec = Timex.diff(Timex.now(), time, :seconds)
-
-        Logger.debug("Differen secs: #{diff_sec} / #{wait_seconds}")
 
         if diff_sec < wait_seconds do
           Logger.info(

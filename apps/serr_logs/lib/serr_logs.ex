@@ -19,6 +19,12 @@ defmodule SerrLogs do
     Logger.debug("Starting Log application")
     Supervisor.start_link(children, strategy: :one_for_one, name: SerrLogs.Supervisor)
   end
+
+  defmacro trace_start do
+    quote do
+      Logger.debug("start call pid: #{inspect(self())}")
+    end
+  end
 end
 
 defmodule SerrLogs.Scheduler do

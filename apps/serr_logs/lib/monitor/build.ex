@@ -7,13 +7,10 @@ defmodule SerrLogs.Monitor.Build do
   alias Nostrum.Struct.Embed, as: Embed
 
   defstart start_link(state) do
-    Logger.debug("Build monitor started with #{inspect(state)}")
     initial_state(state)
   end
 
   defcast pool(), state: state do
-    Logger.debug("Start pooling build status")
-
     state
     |> Enum.map(fn {k, %{build_services: build_services}} ->
       spawn_link(SerrLogs.Monitor.Build, :pool_domain, [self(), k, build_services])
@@ -27,8 +24,6 @@ defmodule SerrLogs.Monitor.Build do
       build_channel: build_channel
     } = Map.get(state, domain)
 
-    Logger.debug("Update #{domain}, result data: #{inspect(res)}")
-
     current_ids =
       state
       |> get_in([domain, :previous])
@@ -40,15 +35,8 @@ defmodule SerrLogs.Monitor.Build do
       |> Enum.map(fn %{id: id} -> id end)
       |> MapSet.new()
 
-    Logger.debug("Build ids: #{inspect(build_ids)}")
-    Logger.debug("Current ids: #{inspect(current_ids)}")
-
     new_build_ids = MapSet.difference(build_ids, current_ids)
     end_build_ids = MapSet.difference(current_ids, build_ids)
-
-    Logger.debug("New build ids: #{inspect(new_build_ids)}")
-    Logger.debug("End build ids: #{inspect(end_build_ids)}")
-
     new_builds = res |> Enum.filter(&MapSet.member?(new_build_ids, &1.id))
 
     end_builds =
@@ -66,7 +54,6 @@ defmodule SerrLogs.Monitor.Build do
         prevs |> Enum.filter(&(!MapSet.member?(end_build_ids, &1.id)))
       end)
 
-    Logger.debug("New state after remove end items: #{inspect(new_state_)}")
     new_state(new_state_)
   end
 

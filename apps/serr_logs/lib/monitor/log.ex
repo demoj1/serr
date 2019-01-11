@@ -41,12 +41,10 @@ defmodule SerrLogs.Monitor.Log do
   defstart start_link do
     config = Application.get_env(:serr_logs, :observers)
 
-    Logger.debug("Config: #{inspect(config)}")
     SerrLogs.Doctor.check_health()
 
     state =
       Enum.reduce(config, %{}, fn {domain, setting}, acc ->
-        Logger.debug("Start domain monitor for #{inspect(domain)}")
         {:ok, pid} = SerrLogs.Monitor.LogDomain.start_link(domain, setting)
         Map.put(acc, domain, pid)
       end)
@@ -55,9 +53,7 @@ defmodule SerrLogs.Monitor.Log do
   end
 
   defcast send(domain, msg), state: state do
-    Logger.debug("Cast to domain: #{domain} msg: #{inspect(msg)}")
     domain_monitor = Map.get(state, domain)
-    Logger.debug("Domain find #{inspect(domain_monitor)}")
 
     GenServer.cast(domain_monitor, msg)
 
@@ -65,9 +61,7 @@ defmodule SerrLogs.Monitor.Log do
   end
 
   defcall fetch(domain, msg), state: state do
-    Logger.debug("Call to domain: #{domain} msg: #{inspect(msg)}")
     domain_monitor = Map.get(state, domain)
-    Logger.debug("Domain find #{inspect(domain_monitor)}")
 
     res = GenServer.call(domain_monitor, msg)
     reply(res)
@@ -127,8 +121,6 @@ defmodule SerrLogs.Monitor.LogDomain do
 
   @spec pool_data(map) :: any
   def pool_data(%{domain: domain, level: level, service: service, last_time: last_time}) do
-    Logger.debug("Pooling data: #{inspect(last_time)}")
-
     SerrLogs.CloudApi.get_log_msg_for_time(
       last_time,
       service,
@@ -185,15 +177,12 @@ defmodule SerrLogs.Monitor.LogDomain do
 
   @spec initial_schedule(String.t(), pos_integer) :: atom
   def initial_schedule(domain, pooling_minutes) do
-    Logger.debug("Initial schedule")
     res = SerrLogs.Scheduler.delete_job(String.to_atom("Beat_domain_#{domain}"))
-    Logger.debug("Delete job: #{inspect(res)}")
 
     SerrLogs.Scheduler.new_job()
     |> Quantum.Job.set_name(String.to_atom("Beat_domain_#{domain}"))
     |> Quantum.Job.set_schedule(Crontab.CronExpression.Parser.parse!("*/#{pooling_minutes}"))
     |> Quantum.Job.set_task(fn ->
-      Logger.debug("Send pool msg to #{domain}")
       SerrLogs.Monitor.Log.send(domain, :pool)
     end)
     |> SerrLogs.Scheduler.add_job()
