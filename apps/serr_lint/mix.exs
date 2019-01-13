@@ -30,7 +30,7 @@ defmodule SerrLint.MixProject do
       {:httpoison, "~> 0.13"},
       {:poison, "~> 3.1"},
       {:quantum, "~> 2.3"},
-      {:credo, "~> 0.5", only: [:dev, :test]},
+      {:credo, "~> 1.0.0", only: [:dev, :test], runtime: false},
       {:dogma, "~> 0.1", only: :dev},
       {:dialyxir, "~> 1.0.0-rc.4", only: [:dev], runtime: false}
       # {:dep_from_hexpm, "~> 0.3.0"},

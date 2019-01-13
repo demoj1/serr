@@ -1,6 +1,7 @@
 defmodule SerrLogs.Doctor do
   require Logger
 
+  @spec check_health() :: [any]
   def check_health() do
     domains = Application.get_env(:serr_logs, :observers)
 

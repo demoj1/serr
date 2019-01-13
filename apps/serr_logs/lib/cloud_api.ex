@@ -83,7 +83,13 @@ defmodule SerrLogs.CloudApi do
     id
   end
 
-  @spec get_log_msg_for_time(any, String.t(), String.t(), list(integer)) :: any
+  @spec get_log_msg_for_time(
+          any,
+          String.t() | nil,
+          list(String.t()) | nil,
+          String.t(),
+          list(integer)
+        ) :: any
   def get_log_msg_for_time(
         last_query_time \\ Timex.shift(Timex.now(), minutes: -15),
         service \\ nil,

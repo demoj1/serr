@@ -11,6 +11,8 @@ defmodule SerrLogs.Monitor.Build do
   end
 
   defcast pool(), state: state do
+    Logger.debug("Pool monitor build: #{inspect(state)}")
+
     state
     |> Enum.map(fn {k, %{build_services: build_services}} ->
       spawn_link(SerrLogs.Monitor.Build, :pool_domain, [self(), k, build_services])
@@ -109,11 +111,15 @@ defmodule SerrLogs.Monitor.Build do
     :ok
   end
 
-  @spec pool_domain(pid, String.t(), [String.t()]) :: :ok
+  @spec pool_domain(pid, String.t(), list(String.t())) :: :ok
   def pool_domain(pid, domain, build_services) do
+    Logger.debug("Start pool domain #{inspect(domain)}, services: #{inspect(build_services)}")
+
     res =
       case SerrLogs.CloudApi.get_build_status(domain) do
         result when is_list(result) ->
+          Logger.debug("Pool result: #{inspect(result)}")
+
           result
           |> Enum.map(fn data ->
             Map.update!(data, :begin_time, &Timex.parse!(&1, "{ISO:Extended}"))
@@ -122,6 +128,8 @@ defmodule SerrLogs.Monitor.Build do
           |> Enum.filter(&(&1.name in build_services))
 
         _ ->
+          Logger.debug("Pool empty msg")
+
           :empty
       end
 
