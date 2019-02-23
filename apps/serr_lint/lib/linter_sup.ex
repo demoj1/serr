@@ -62,34 +62,33 @@ defmodule SerrLint.ProjectLinter do
   end
 
   defcast pool(), state: state do
-    mrs = GitlabAPI.get_target_mrs(state.id)
-    Logger.debug("Response mrs: #{inspect(mrs)}")
+    mrs = GitlabAPI.get_target_mrs(state.id, state.target_label)
 
-    res =
-      Enum.each(mrs, fn %{mr_id: mr_id} ->
-        GitlabAPI.update_mr_label(state.id, mr_id, "Checking...")
+    Enum.each(mrs, fn %{mr_id: mr_id} ->
+      GitlabAPI.update_mr_label(state.id, mr_id, "Checking...")
 
+      try do
         %{
-          "id" => diff_id,
-          "head_commit_sha" => head_sha,
-          "base_commit_sha" => base_sha,
-          "start_commit_sha" => start_sha
+          "head_commit_sha"  => head_sha,
+          "base_commit_sha"  => base_sha,
+          "start_commit_sha" => start_sha,
+          "id"               => diff_id
         } = GitlabAPI.get_last_diff_id(state.id, mr_id)
 
-        Logger.debug("Diff id: #{inspect(diff_id)} head sha: #{inspect(head_sha)}")
-
         diff_files = GitlabAPI.get_all_diff_file(state.id, mr_id, diff_id)
-        Logger.debug("#{inspect(diff_files)}")
 
         Enum.each(diff_files, fn file ->
           file_body = GitlabAPI.load_raw_file(state.id, file, head_sha)
           lint_file(file_body, file, mr_id, head_sha, base_sha, start_sha)
         end)
-
+      rescue
+        e ->
+          IO.puts(:stderr, e.message)
+          GitlabAPI.update_mr_label(state.id, mr_id, "Error")
+      after
         GitlabAPI.update_mr_label(state.id, mr_id, "Finish")
-      end)
-
-    Logger.debug(res)
+      end
+    end)
 
     new_state(state)
   end
@@ -104,8 +103,6 @@ defmodule SerrLint.ProjectLinter do
     new_state(state)
   end
 
-  # SerrLint.ProjectMonitor.send("mercury", :pool)
-
   defp lint_file(file_body, file_path, mr_id, head, base, start) do
     tmp_dir = "/tmp/#{head}/"
 
@@ -115,17 +112,20 @@ defmodule SerrLint.ProjectLinter do
     File.open!(sys_file_path, [:write], fn file ->
       IO.binwrite(file, file_body)
 
-      {res, _} = SerrLint.EslintAPI.lint_file(sys_file_path)
-
-      lint_res =
-        Poison.decode!(res)
-        |> Enum.map(&Map.pop(&1, "messages"))
-        |> Enum.at(0, [])
-        |> Tuple.to_list()
-        |> Enum.at(0, [])
-        |> Enum.map(&Map.take(&1, ["message", "line", "ruleId", "severity", "column"]))
-
-      GenServer.cast(self(), {:lint_result, mr_id, file_path, mr_id, head, base, start, lint_res})
+      lint_res = SerrLint.EslintAPI.lint_file(sys_file_path)
+      GenServer.cast(
+        self(),
+        {
+          :lint_result,
+          mr_id,
+          file_path,
+          mr_id,
+          head,
+          base,
+          start,
+          lint_res
+        }
+      )
     end)
 
     File.rm(sys_file_path)
@@ -135,19 +135,29 @@ defmodule SerrLint.ProjectLinter do
     :crypto.strong_rand_bytes(length) |> Base.url_encode64() |> binary_part(0, length)
   end
 
-  defp open_discussion(msg, project_id, mr_id, file, head_sha, base_sha, start_sha) do
+  defp open_discussion(
+    msg,
+    project_id,
+    mr_id,
+    file,
+    head_sha,
+    base_sha,
+    start_sha
+  ) do
     %{
-      "ruleId" => rule_id,
       "severity" => level,
-      "message" => message,
-      "line" => line,
-      "column" => column
+      "message"  => message,
+      "ruleId"   => rule_id,
+      "column"   => column,
+      "line"     => line
     } = msg
+
+    Logger.debug("Open disccusion: #{inspect(msg)}")
 
     circle =
       case level do
-        2 -> ":red_circle:"
         1 -> ":large_blue_circle:"
+        2 -> ":red_circle:"
       end
 
     GitlabAPI.open_discussion(project_id, mr_id, %{
@@ -157,12 +167,12 @@ defmodule SerrLint.ProjectLinter do
       * Строка: #{line}
       * Столбец: #{column}
       """,
-      "position[base_sha]" => base_sha,
-      "position[start_sha]" => start_sha,
-      "position[head_sha]" => head_sha,
-      "position[position_type]" => "text",
-      "position[new_path]" => file,
-      "position[new_line]" => line
+      "position[base_sha]"      => base_sha,
+      "position[start_sha]"     => start_sha,
+      "position[head_sha]"      => head_sha,
+      "position[new_path]"      => file,
+      "position[new_line]"      => line,
+      "position[position_type]" => "text"
     })
   end
 
