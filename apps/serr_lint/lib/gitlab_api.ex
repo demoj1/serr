@@ -165,6 +165,8 @@ defmodule SerrLint.GitlabAPI do
 
   @doc """
   Открыть новую дискусю на gitlab-е.
+  > Более подробно
+  > https://docs.gitlab.com/ee/api/discussions.html#create-new-merge-request-discussion
 
   ### Параметры
   * `project_id` - ID проекта на gitlab.
