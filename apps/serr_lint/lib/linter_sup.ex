@@ -183,9 +183,9 @@ defmodule SerrLint.ProjectLinter do
   end
 
   defp initial_schedule(name, pooling_minutes) do
+    job_name = String.to_atom("Beat_linter_#{name}")
     Logger.debug("Delete job: #{inspect(Scheduler.delete_job(job_name))}")
 
-    job_name = String.to_atom("Beat_linter_#{name}")
     Scheduler.new_job()
     |> Job.set_name(job_name)
     |> Job.set_schedule(Parser.parse!("*/#{pooling_minutes}"))

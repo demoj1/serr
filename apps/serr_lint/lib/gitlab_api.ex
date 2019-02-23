@@ -137,8 +137,6 @@ defmodule SerrLint.GitlabAPI do
       fn %{"new_path" => new_path} -> new_path end
     )
     |> Enum.filter(&String.ends_with?(&1, [".next"]))
-
-    Enum.filter_map(enumerable, filter, mapper)
   end
 
   @doc """
