@@ -132,9 +132,13 @@ defmodule SerrLint.GitlabAPI do
     |> Map.get(:body)
     |> Poison.decode!()
     |> Map.get("diffs", [])
-    |> Enum.filter(fn %{"deleted_file" => deleted_file} -> not deleted_file end)
-    |> Enum.map(fn %{"new_path" => new_path} -> new_path end)
+    |> Enum.filter_map(
+      fn %{"deleted_file" => deleted_file} -> not deleted_file end,
+      fn %{"new_path" => new_path} -> new_path end
+    )
     |> Enum.filter(&String.ends_with?(&1, [".next"]))
+
+    Enum.filter_map(enumerable, filter, mapper)
   end
 
   @doc """

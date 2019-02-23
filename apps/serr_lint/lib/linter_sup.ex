@@ -131,8 +131,14 @@ defmodule SerrLint.ProjectLinter do
     File.rm(sys_file_path)
   end
 
+  @doc """
+  Сгенерировать случайную строку, указанной длины.
+  """
+  @spec random_string(integer) :: String.t
   defp random_string(length) do
-    :crypto.strong_rand_bytes(length) |> Base.url_encode64() |> binary_part(0, length)
+    :crypto.strong_rand_bytes(length)
+    |> Base.url_encode64()
+    |> binary_part(0, length)
   end
 
   defp open_discussion(
@@ -177,18 +183,13 @@ defmodule SerrLint.ProjectLinter do
   end
 
   defp initial_schedule(name, pooling_minutes) do
-    Logger.debug("Initial schedule")
+    Logger.debug("Delete job: #{inspect(Scheduler.delete_job(job_name))}")
 
     job_name = String.to_atom("Beat_linter_#{name}")
-    res = Scheduler.delete_job(job_name)
-
-    Logger.debug("Delete job: #{inspect(res)}")
-
     Scheduler.new_job()
     |> Job.set_name(job_name)
     |> Job.set_schedule(Parser.parse!("*/#{pooling_minutes}"))
     |> Job.set_task(fn ->
-      Logger.debug("Send check new mr msg to #{name}")
       ProjectMonitor.send(name, :pool)
     end)
     |> Scheduler.add_job()
