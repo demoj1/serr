@@ -10,6 +10,6 @@ defmodule Serr.MixProject do
   end
 
   defp deps do
-    []
+    [{:observer_cli, "~> 1.4"}]
   end
 end
