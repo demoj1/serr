@@ -30,7 +30,8 @@ config :serr_logs,
         "egais",
         "ved-prices",
         "plugin-task-queue",
-        "ved-prices"
+        "ved-prices",
+        "inside"
       ],
       services: [
         %{
